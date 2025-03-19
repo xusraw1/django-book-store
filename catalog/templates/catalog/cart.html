@@ -1,0 +1,125 @@
+{% extends 'catalog/base.html' %}
+{% block content %}
+<style>
+    /* Улучшаем отображение таблицы на маленьких экранах */
+    @media (max-width: 768px) {
+        .table-responsive table {
+            font-size: 14px;
+            /* Уменьшаем текст */
+        }
+
+        .table th,
+        .table td {
+            padding: 8px;
+            /* Уменьшаем отступы */
+        }
+
+        .btn {
+            font-size: 12px;
+            /* Уменьшаем кнопки */
+            padding: 5px 8px;
+        }
+    }
+
+    /* Делаем корзину удобнее на очень маленьких экранах */
+    @media (max-width: 576px) {
+        .table thead {
+            display: none;
+            /* Скрываем заголовки таблицы */
+        }
+
+        .table tbody tr {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+
+        .table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    }
+</style>
+
+<div class="container my-5">
+    <h1 class="mb-4 text-center">🛒 Ваша корзина</h1>
+
+    {% if cart %}
+    <div class="table-responsive">
+        <table class="table table-primary align-middle text-center">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Название</th>
+                    <th>Цена</th>
+                    <th>Количество</th>
+                    <th>Итого</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book, item in cart.items %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><a href="{% url 'book_detail' book_id=book %}">{{ item.title }}</a></td>
+                    <td>{{ item.price }}$</td>
+                    <td>
+                        <a href="{% url 'update_cart' book 'decrease' %}" class="btn btn-outline-secondary">−</a>
+                        <span class="mx-2">{{ item.quantity }}</span>
+                        <a href="{% url 'update_cart' book 'increase' %}" class="btn btn-outline-secondary">+</a>
+                    </td>
+                    <td>{{ item.item_total }}$</td>
+                    <td>
+                        <a href="{% url 'remove_from_cart' book %}" class="btn btn-danger">Удалить</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="text-end mt-4">
+        <h4 class="text-danger fw-bold">Общая стоимость: <span id="total-price">{{ total }}$</span></h4>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'book_list' %}" class="btn btn-secondary">🛍 Продолжить покупки</a>
+        <a href="{% url 'checkout' %}" class="btn btn-primary">✅ Оформить заказ</a>
+    </div>
+    {% else %}
+    <div class="alert alert-warning text-center">Ваша корзина пуста 😔</div>
+    <div class="text-center">
+        <a href="{% url 'book_list' %}" class="btn btn-success">🔙 Вернуться в каталог</a>
+    </div>
+    {% endif %}
+
+    {% if random_books %}
+    <div class="container mt-5">
+        <h3 class="mb-4 text-center">📚 Вам может понравиться</h3>
+        <div class="row">
+            {% for book in random_books %}
+            <div class="col-sm-6 col-md-4 col-lg-3 mb-4"> <!-- Адаптивность -->
+                <div class="card h-100 shadow-sm">
+                    <img src="{{ book.image.url }}" class="card-img-top" alt="{{ book.title }}"
+                        style="height: 300px; object-fit: cover;"> <!-- Уменьшил картинку -->
+                    <div class="card-body d-flex flex-column text-center">
+                        <h6 class="card-title"><a href="{% url 'book_detail' book.id %}">{{ book.title }}</a></h6>
+                        <div class="btn-group mt-auto" role="group">
+                            <span class="btn btn-light fw-bold fs-6">{{ book.price }}$</span>
+                            <a href="{% url 'add_to_cart' book.id %}" class="btn btn-outline-success">В корзину</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+
+
+{% endblock %}

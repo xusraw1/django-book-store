@@ -1,0 +1,88 @@
+{% extends 'catalog/base.html' %}
+{% load custom_filters %}
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Заголовок -->
+            <h1 class="text-center text-success mb-4">
+                <i class="fas fa-check-circle"></i> ✅ Ваш заказ успешно оформлен!
+            </h1>
+
+            <!-- Подтверждение -->
+            <p class="text-center lead">Спасибо за покупку! Мы получили ваш заказ, и он сейчас обрабатывается.</p>
+
+            <div class="alert alert-success text-center mb-4">
+                <h3>Спасибо за ваш заказ, {{ request.user.username }}!</h3>
+                <p>Ваш заказ успешно оформлен. Мы скоро свяжемся с вами для подтверждения.</p>
+            </div>
+
+            <!-- Информация о заказе -->
+            <h4 class="text-primary">Информация о заказе:</h4>
+            <table class="table table-bordered mb-4">
+                <tbody>
+                    <tr>
+                        <th>Имя</th>
+                        <td>{{ order.first_name }} {{ order.last_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Email</th>
+                        <td>{{ order.email }}</td>
+                    </tr>
+                    <tr>
+                        <th>Адрес</th>
+                        <td>{{ order.address }}</td>
+                    </tr>
+                    <tr>
+                        <th>Способ доставки</th>
+                        <td>{{ delivery_method_display }}</td>
+                    </tr>
+
+                    <tr>
+                        <th>Способ оплаты</th>
+                        <td>{{ payment_method_display }}</td>
+                    </tr>
+                    <tr>
+                        <th>Общая сумма</th>
+                        <td>{{ total_price }}$</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Содержимое заказа -->
+            <h4 class="text-primary">Содержимое заказа:</h4>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Название книги</th>
+                        <th>Количество</th>
+                        <th>Цена за единицу</th>
+                        <th>Итого</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order_items %}
+                    <tr>
+                        <td>{{ item.book.title }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.price }}$</td>
+                        <td>{{ item.price|multiply:item.quantity }}$</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Дополнительная информация -->
+            <p class="text-center mt-4">В ближайшее время наш менеджер свяжется с вами для подтверждения и уточнения
+                деталей.</p>
+            <p class="text-center">Если у вас возникнут вопросы, вы можете обратиться по телефону <strong>+998 (90)
+                    898-29-09</strong> или написать на <strong>xusrav200329@gmail.com</strong>.</p>
+
+            <!-- Кнопка возврата на главную -->
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-lg btn-primary">Вернуться на главную</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
