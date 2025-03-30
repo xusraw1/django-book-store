@@ -1,17 +1,33 @@
 from django.core.paginator import Paginator
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Q
-from .models import Book, Catalog
+from .models import *
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from .forms import RegisterForm, LoginForm
+from .forms import *
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse
 from django.http import JsonResponse
 import random
-from .models import Order, OrderItem, Profile
-from .forms import OrderForm, DeliveryPaymentForm, ProfileForm
+
+
+"""
+Все функции связанные с профилем
+"""
+
+@login_required
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    delivery_display = order.get_delivery_method_display()
+    payment_display = order.get_payment_method_display()
+
+    return render(request, 'catalog/profile_orders.html', {
+        'order': order,
+        'delivery_display': delivery_display,
+        'payment_display': payment_display
+    })
 
 @login_required
 def profile_view(request):
@@ -113,18 +129,20 @@ def order_success(request, order_id):
         'payment_method_display': payment_method_display,
     })
 
-
+"""Регистрация нового пользователя"""
 def register(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)  # Автоматически входим после регистрации
-            return redirect('book_list')  # Перенаправляем на главную страницу
+            login(request, user)
+            return redirect('book_list')
     else:
         form = RegisterForm()
     return render(request, 'catalog/register.html', {'form': form})
 
+
+"""Вход в аккаунт"""
 def user_login(request):
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -139,62 +157,14 @@ def user_login(request):
         form = LoginForm()
     return render(request, 'catalog/login.html', {'form': form})
 
+
+"""Выход из профиля"""
 @login_required
 def user_logout(request):
     logout(request)
     return redirect('book_list')  # Перенаправляем на главную страницу
 
-def book_list(request, catalog_id=None):
-    query = request.GET.get('q', '')  # Получаем параметр 'q' из запроса
-    books_list = Book.objects.all()  # Базовый queryset
-
-    if catalog_id:
-        catalog = get_object_or_404(Catalog, id=catalog_id)
-        books_list = catalog.books.all()  # Фильтруем по каталогу
-
-    # Фильтрация по названию или автору, если введён запрос
-    if query:
-        books_list = books_list.filter(title__icontains=query) | books_list.filter(author__icontains=query)
-
-    paginator = Paginator(books_list, 3)
-    page_number = request.GET.get('page')
-    books = paginator.get_page(page_number)
-    catalogs = Catalog.objects.all()
-
-    return render(request, 'catalog/book_list.html', {'books': books, 'catalogs': catalogs, 'query': query})
-
-def book_detail(request, book_id):
-    book = get_object_or_404(Book, id=book_id)
-
-    # Получаем книги из той же категории, исключая текущую
-    related_books = Book.objects.filter(catalog=book.catalog).exclude(id=book.id)[:4]
-
-    return render(request, 'catalog/book_detail.html', {
-        'book': book,
-        'related_books': related_books
-    })
-
-
-def add_to_cart(request, book_id):
-    if not request.user.is_authenticated:
-        messages.warning(request, "Войдите в систему, чтобы добавить книгу в корзину.")
-        return redirect('/login/?next=' + request.path)  # После входа вернет обратно
-
-    # Если пользователь авторизован — продолжаем обычное добавление
-    book = get_object_or_404(Book, id=book_id)
-    cart = request.session.get('cart', {})
-
-    if str(book_id) in cart:
-        cart[str(book_id)]['quantity'] += 1
-        messages.success(request, f'Вы добавили ещё один экземпляр "{book.title}" в корзину.')
-    else:
-        cart[str(book_id)] = {'title': book.title, 'price': str(book.price), 'quantity': 1}
-        messages.success(request, f'Книга "{book.title}" добавлена в корзину!')
-
-    request.session['cart'] = cart
-    return redirect('cart')
-
-
+"""Функции связанные с оформлением заказов"""
 def cart_view(request):
     cart = request.session.get('cart', {})
     
@@ -258,22 +228,59 @@ def remove_from_cart(request, book_id):
 
     return redirect(reverse("cart"))
 
-@login_required
-def order_detail(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-    
-    # Передаем значения в контекст вручную
-    delivery_display = order.get_delivery_method_display()
-    payment_display = order.get_payment_method_display()
 
-    return render(request, 'catalog/profile_orders.html', {
-        'order': order,
-        'delivery_display': delivery_display,
-        'payment_display': payment_display
+def add_to_cart(request, book_id):
+    if not request.user.is_authenticated:
+        messages.warning(request, "Войдите в систему, чтобы добавить книгу в корзину.")
+        return redirect('/login/?next=' + request.path)  # После входа вернет обратно
+
+    # Если пользователь авторизован — продолжаем обычное добавление
+    book = get_object_or_404(Book, id=book_id)
+    cart = request.session.get('cart', {})
+
+    if str(book_id) in cart:
+        cart[str(book_id)]['quantity'] += 1
+        messages.success(request, f'Вы добавили ещё один экземпляр "{book.title}" в корзину.')
+    else:
+        cart[str(book_id)] = {'title': book.title, 'price': str(book.price), 'quantity': 1}
+        messages.success(request, f'Книга "{book.title}" добавлена в корзину!')
+
+    request.session['cart'] = cart
+    return redirect('cart')
+
+
+
+
+"""Главная страница и просмотр книг"""
+def book_list(request, catalog_id=None):
+    query = request.GET.get('q', '')  # Получаем параметр 'q' из запроса
+    books_list = Book.objects.all()  # Базовый queryset
+
+    if catalog_id:
+        catalog = get_object_or_404(Catalog, id=catalog_id)
+        books_list = catalog.books.all()  # Фильтруем по каталогу
+
+    # Фильтрация по названию или автору, если введён запрос
+    if query:
+        books_list = books_list.filter(title__icontains=query) | books_list.filter(author__icontains=query)
+
+    paginator = Paginator(books_list, 3)
+    page_number = request.GET.get('page')
+    books = paginator.get_page(page_number)
+    catalogs = Catalog.objects.all()
+
+    return render(request, 'catalog/book_list.html', {'books': books, 'catalogs': catalogs, 'query': query})
+
+def book_detail(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+
+    # Получаем книги из той же категории, исключая текущую
+    related_books = Book.objects.filter(catalog=book.catalog).exclude(id=book.id)[:4]
+
+    return render(request, 'catalog/book_detail.html', {
+        'book': book,
+        'related_books': related_books
     })
-
-
 
 def about(request):
     return render(request, 'catalog/about.html')
-
